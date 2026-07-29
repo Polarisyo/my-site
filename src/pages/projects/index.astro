@@ -1,0 +1,230 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const allProjects = await getCollection('projects');
+
+const statusOrder = { active: 0, concept: 1, archived: 2 } as const;
+
+const sortedProjects = allProjects.sort((a, b) => {
+  const orderA = statusOrder[a.data.status] ?? 99;
+  const orderB = statusOrder[b.data.status] ?? 99;
+  if (orderA !== orderB) return orderA - orderB;
+  return b.data.featured === a.data.featured ? 0 : b.data.featured ? -1 : 1;
+});
+
+const statusLabels: Record<string, string> = {
+  active: '进行中',
+  concept: '概念',
+  archived: '已归档',
+};
+
+const statusColors: Record<string, string> = {
+  active: 'status-active',
+  concept: 'status-concept',
+  archived: 'status-archived',
+};
+---
+
+<BaseLayout title="项目">
+  <div class="page-header">
+    <h1 class="page-title">项目</h1>
+    <p class="page-desc">作品集与开源贡献</p>
+  </div>
+
+  {sortedProjects.length === 0 ? (
+    <div class="empty-state">
+      <p>暂无项目</p>
+    </div>
+  ) : (
+    <div class="project-grid">
+      {sortedProjects.map((project) => (
+        <article class="project-card">
+          <a href={`/projects/${project.id}`} class="project-link">
+            <div class="project-header">
+              <h2 class="project-name">{project.data.name}</h2>
+              <span class={`project-status ${statusColors[project.data.status]}`}>
+                {statusLabels[project.data.status] ?? project.data.status}
+              </span>
+            </div>
+            <p class="project-desc">{project.data.description}</p>
+            <div class="project-tech">
+              {project.data.techStack.map((tech) => (
+                <span class="tech-tag">{tech}</span>
+              ))}
+            </div>
+          </a>
+          <div class="project-links">
+            {project.data.demoUrl && (
+              <a
+                href={project.data.demoUrl.toString()}
+                class="project-link-item"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                在线演示 ↗
+              </a>
+            )}
+            <a
+              href={project.data.repoUrl.toString()}
+              class="project-link-item"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              源代码 ↗
+            </a>
+          </div>
+        </article>
+      ))}
+    </div>
+  )}
+</BaseLayout>
+
+<style>
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin: 0 0 0.375rem;
+    letter-spacing: -0.02em;
+  }
+
+  .page-desc {
+    font-size: 0.9375rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 0;
+    color: var(--color-text-muted);
+  }
+
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .project-card {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-card);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+
+  .project-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .project-link {
+    text-decoration: none;
+    color: inherit;
+    flex: 1;
+  }
+
+  .project-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .project-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-text);
+  }
+
+  .project-card:hover .project-name {
+    color: var(--color-accent);
+  }
+
+  .project-status {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+  }
+
+  .status-active {
+    color: #10b981;
+    background-color: rgba(16, 185, 129, 0.1);
+  }
+
+  .status-concept {
+    color: #f59e0b;
+    background-color: rgba(245, 158, 11, 0.1);
+  }
+
+  .status-archived {
+    color: #6b7280;
+    background-color: rgba(107, 114, 128, 0.1);
+  }
+
+  .project-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0 0 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .project-tech {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 1rem;
+  }
+
+  .tech-tag {
+    font-size: 0.6875rem;
+    padding: 0.125rem 0.5rem;
+    color: var(--color-text-muted);
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+  }
+
+  .project-links {
+    display: flex;
+    gap: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .project-link-item {
+    font-size: 0.8125rem;
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .project-link-item:hover {
+    color: var(--color-accent-hover);
+  }
+
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: 1.5rem;
+    }
+
+    .project-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

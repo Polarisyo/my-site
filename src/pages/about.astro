@@ -1,0 +1,228 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="关于">
+  <div class="about-page">
+    <section class="hero-section">
+      <div class="avatar">
+        <div class="avatar-placeholder">MN</div>
+      </div>
+      <div class="hero-text">
+        <h1 class="page-title">关于我</h1>
+        <p class="hero-desc">
+          你好！我是一名热爱技术与创造的开发者。这个网站是我的数字花园，
+          用来记录日常思考、学习笔记和项目作品。
+        </p>
+      </div>
+    </section>
+
+    <section class="about-section">
+      <h2 class="section-title">简介</h2>
+      <p class="section-text">
+        我是谁，我在哪？
+      </p>
+      <p class="section-text">
+        这个网站使用 Astro 构建，是我实践静态内容管理的尝试。
+        如果你对我的作品感兴趣，欢迎通过下方的链接联系我。
+      </p>
+    </section>
+
+    <section class="about-section">
+      <h2 class="section-title">技能栈</h2>
+      <div class="skills-grid">
+        <div class="skill-category">
+          <h3 class="skill-heading">前端</h3>
+          <ul class="skill-list">
+            <li>HTML / CSS / TypeScript</li>
+            <li>Vue 3 / React</li>
+            <li>Astro / Tailwind CSS</li>
+          </ul>
+        </div>
+        <div class="skill-category">
+          <h3 class="skill-heading">工具</h3>
+          <ul class="skill-list">
+            <li>Git / GitHub</li>
+            <li>Vite / Webpack</li>
+            <li>Node.js / npm</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-section">
+      <h2 class="section-title">联系方式</h2>
+      <div class="contact-list">
+        <a href="mailto:hello@example.com" class="contact-item">
+          <span class="contact-label">邮箱</span>
+          <span class="contact-value">hello@example.com</span>
+        </a>
+        <a
+          href="https://github.com/Polarisyo"
+          class="contact-item"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span class="contact-label">GitHub</span>
+          <span class="contact-value">Polarisyo</span>
+        </a>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .about-page {
+    padding-bottom: 2rem;
+  }
+
+  .hero-section {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1rem 0 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .avatar {
+    flex-shrink: 0;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--color-border);
+  }
+
+  .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+  }
+
+  .hero-text {
+    flex: 1;
+  }
+
+  .page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-desc {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .about-section {
+    margin-bottom: 2rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+  }
+
+  .section-text {
+    font-size: 0.9375rem;
+    color: var(--color-text-secondary);
+    line-height: 1.8;
+    margin: 0 0 0.75rem;
+  }
+
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .skill-category {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg-card);
+  }
+
+  .skill-heading {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    color: var(--color-text);
+  }
+
+  .skill-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .skill-list li {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    padding: 0.25rem 0;
+  }
+
+  .contact-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .contact-item {
+    display: flex;
+    flex-direction: column;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+
+  .contact-item:hover {
+    border-color: var(--color-accent);
+    background-color: var(--color-bg-secondary);
+  }
+
+  .contact-label {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+
+  .contact-value {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-text);
+  }
+
+  .contact-item:hover .contact-value {
+    color: var(--color-accent);
+  }
+
+  @media (max-width: 768px) {
+    .hero-section {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+    }
+
+    .contact-list {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

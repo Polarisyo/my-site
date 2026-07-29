@@ -1,0 +1,210 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TagFilter from '../../components/TagFilter.astro';
+import { getCollection } from 'astro:content';
+import { formatDateShort, groupByYear, sortByDateDesc } from '../../utils/date';
+
+const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+const sortedPosts = sortByDateDesc(allPosts);
+const allTags = [...new Set(sortedPosts.flatMap((p) => p.data.tags))];
+const groupedPosts = groupByYear(sortedPosts);
+const sortedYears = [...groupedPosts.keys()].sort((a, b) => b - a);
+---
+
+<BaseLayout title="日常">
+  <div class="page-header">
+    <h1 class="page-title">日常</h1>
+    <p class="page-desc">记录生活随笔、开发日志与月度总结</p>
+  </div>
+
+  <TagFilter tags={allTags} baseUrl="/blog" />
+
+  {sortedPosts.length === 0 ? (
+    <div class="empty-state">
+      <p>暂无文章</p>
+    </div>
+  ) : (
+    <div class="blog-list">
+      {sortedYears.map((year) => (
+        <section class="year-section">
+          <h2 class="year-heading">{year}</h2>
+          <ul class="post-list">
+            {groupedPosts.get(year)!.map((post) => (
+              <li class="post-item" data-post-tags={post.data.tags.join(', ')}>
+                <a href={`/blog/${post.id}`} class="post-link">
+                  <span class="post-title">{post.data.title}</span>
+                  <time class="post-date" datetime={post.data.date.toISOString()}>
+                    {formatDateShort(post.data.date)}
+                  </time>
+                </a>
+                {post.data.tags.length > 0 && (
+                  <div class="post-tags">
+                    {post.data.tags.map((tag) => (
+                      <a
+                        href={`/blog?tag=${encodeURIComponent(tag)}`}
+                        data-tag={tag}
+                        class="tag"
+                      >
+                        {tag}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )}
+</BaseLayout>
+
+<script>
+  (function () {
+    function getTagFromUrl() {
+      var params = new URLSearchParams(window.location.search);
+      return params.get('tag') || '';
+    }
+
+    function applyTagFilter(tag) {
+      var newUrl = tag
+        ? window.location.pathname + '?tag=' + encodeURIComponent(tag)
+        : window.location.pathname;
+      history.replaceState(null, '', newUrl);
+
+      document.querySelectorAll('[data-tag-filter] .tag-chip').forEach(function (chip) {
+        var chipTag = chip.getAttribute('data-tag') || '';
+        chip.classList.toggle('active', chipTag === tag);
+      });
+
+      var yearSections = document.querySelectorAll('.year-section');
+      yearSections.forEach(function (section) {
+        var hasVisible = false;
+        section.querySelectorAll('.post-item').forEach(function (item) {
+          var tags = (item.getAttribute('data-post-tags') || '').split(',').map(function (t) { return t.trim(); });
+          if (!tag || tags.indexOf(tag) !== -1) {
+            item.style.display = '';
+            hasVisible = true;
+          } else {
+            item.style.display = 'none';
+          }
+        });
+        section.style.display = hasVisible ? '' : 'none';
+      });
+    }
+
+    function onTagClick(e) {
+      var link = e.target.closest('[data-tag]');
+      if (link) {
+        e.preventDefault();
+        var tag = link.getAttribute('data-tag') || '';
+        applyTagFilter(tag);
+      }
+    }
+
+    document.addEventListener('click', onTagClick);
+    window.addEventListener('popstate', function () {
+      applyTagFilter(getTagFromUrl());
+    });
+
+    applyTagFilter(getTagFromUrl());
+  })();
+</script>
+
+<style>
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin: 0 0 0.375rem;
+    letter-spacing: -0.02em;
+  }
+
+  .page-desc {
+    font-size: 0.9375rem;
+    color: var(--color-text-secondary);
+    margin: 0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 0;
+    color: var(--color-text-muted);
+  }
+
+  .year-section {
+    margin-bottom: 2rem;
+  }
+
+  .year-heading {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .post-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .post-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .post-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    text-decoration: none;
+    transition: padding-left 0.2s;
+  }
+
+  .post-link:hover {
+    padding-left: 0.5rem;
+  }
+
+  .post-link:hover .post-title {
+    color: var(--color-accent);
+  }
+
+  .post-title {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-text);
+    line-height: 1.5;
+  }
+
+  .post-date {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.375rem;
+  }
+
+  @media (max-width: 768px) {
+    .post-link {
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+  }
+</style>

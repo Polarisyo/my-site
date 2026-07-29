@@ -1,0 +1,125 @@
+---
+import PostLayout from '../../layouts/PostLayout.astro';
+import { getCollection, render } from 'astro:content';
+import { estimateReadingTime } from '../../utils/reading-time';
+
+export async function getStaticPaths() {
+  const notes = await getCollection('notes', ({ data }) => !data.draft);
+  const sortedNotes = notes.sort((a, b) => {
+    const orderA = a.data.order ?? 999;
+    const orderB = b.data.order ?? 999;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.data.title.localeCompare(b.data.title, 'zh-CN');
+  });
+  return sortedNotes.map((note, index) => ({
+    params: { slug: note.id },
+    props: {
+      note,
+      prevNote: index > 0 ? sortedNotes[index - 1] : null,
+      nextNote: index < sortedNotes.length - 1 ? sortedNotes[index + 1] : null,
+    },
+  }));
+}
+
+const { note, prevNote, nextNote } = Astro.props;
+const { data } = note;
+const { Content, headings } = await render(note);
+const readingTime = estimateReadingTime(note.body);
+---
+
+<PostLayout
+  title={data.title}
+  tags={data.tags}
+  readingTime={readingTime}
+  headings={headings}
+  tagBaseUrl="/notes"
+  parentUrl="/notes"
+  parentLabel="笔记"
+>
+  <Content />
+
+  <nav class="prev-next">
+    {prevNote ? (
+      <a href={`/notes/${prevNote.id}`} class="prev-next-link prev">
+        <span class="prev-next-label">← 上一篇</span>
+        <span class="prev-next-title">{prevNote.data.title}</span>
+      </a>
+    ) : (
+      <div></div>
+    )}
+    {nextNote ? (
+      <a href={`/notes/${nextNote.id}`} class="prev-next-link next">
+        <span class="prev-next-label">下一篇 →</span>
+        <span class="prev-next-title">{nextNote.data.title}</span>
+      </a>
+    ) : (
+      <div></div>
+    )}
+  </nav>
+</PostLayout>
+
+<style>
+  .prev-next {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .prev-next-link {
+    display: block;
+    max-width: 48%;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .prev-next-link:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .prev-next-link.next {
+    text-align: right;
+    margin-left: auto;
+  }
+
+  .prev-next-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.375rem;
+  }
+
+  .prev-next-title {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--color-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .prev-next-link:hover .prev-next-title {
+    color: var(--color-accent);
+  }
+
+  @media (max-width: 768px) {
+    .prev-next {
+      flex-direction: column;
+    }
+
+    .prev-next-link {
+      max-width: 100%;
+    }
+
+    .prev-next-link.next {
+      text-align: left;
+    }
+  }
+</style>

@@ -1,0 +1,71 @@
+---
+---
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-left">
+      <p>© {new Date().getFullYear()} Polaris. All rights reserved.</p>
+    </div>
+    <div class="footer-right">
+      <span class="divider">·</span>
+      <a href="/" class="footer-link">首页</a>
+      <span class="divider">·</span>
+      <button id="back-to-top" class="footer-link" type="button">回到顶部</button>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--color-border);
+    background-color: var(--color-bg);
+  }
+
+  .footer-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1.5rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .footer-left p {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+  }
+
+  .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .footer-link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s;
+  }
+
+  .footer-link:hover {
+    color: var(--color-accent);
+  }
+
+  .divider {
+    color: var(--color-text-muted);
+  }
+
+  @media (max-width: 768px) {
+    .footer-inner {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+</style>

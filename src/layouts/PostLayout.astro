@@ -1,0 +1,237 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { formatDate } from '../utils/date';
+
+interface Props {
+  title: string;
+  date?: Date;
+  tags?: string[];
+  readingTime?: number;
+  headings?: { depth: number; text: string; slug: string }[];
+  parentUrl?: string;
+  parentLabel?: string;
+  tagBaseUrl?: string;
+}
+
+const {
+  title,
+  date,
+  tags = [],
+  readingTime,
+  headings = [],
+  parentUrl,
+  parentLabel,
+  tagBaseUrl = '/blog',
+} = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <article class="post">
+    {parentUrl && (
+      <nav class="breadcrumbs">
+        <a href={parentUrl} class="breadcrumb-link">{parentLabel}</a>
+        <span class="breadcrumb-sep">›</span>
+        <span class="breadcrumb-current">{title}</span>
+      </nav>
+    )}
+
+    <header class="post-header">
+      <h1 class="post-title">{title}</h1>
+      <div class="post-meta">
+        {date && (
+          <time datetime={date.toISOString()} class="post-date">
+            {formatDate(date)}
+          </time>
+        )}
+        {readingTime && (
+          <span class="post-reading-time">{readingTime} 分钟阅读</span>
+        )}
+      </div>
+      {tags.length > 0 && (
+        <div class="post-tags">
+          {tags.map((tag) => (
+            <a href={`${tagBaseUrl}?tag=${encodeURIComponent(tag)}`} class="tag">{tag}</a>
+          ))}
+        </div>
+      )}
+    </header>
+
+    <div class="post-body-wrapper">
+      <div class="post-body prose-content">
+        <slot />
+      </div>
+
+      {headings.length > 0 && (
+        <aside class="post-toc">
+          <div class="toc-header">目录</div>
+          <nav class="toc-nav">
+            {headings
+              .filter((h) => h.depth <= 3)
+              .map((heading) => (
+                <a
+                  href={`#${heading.slug}`}
+                  class={`toc-link toc-depth-${heading.depth}`}
+                >
+                  {heading.text}
+                </a>
+              ))}
+          </nav>
+        </aside>
+      )}
+    </div>
+
+    <slot name="post-footer" />
+  </article>
+</BaseLayout>
+
+<style>
+  .post {
+    padding-bottom: 2rem;
+  }
+
+  .breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1.25rem;
+  }
+
+  .breadcrumb-link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .breadcrumb-link:hover {
+    color: var(--color-accent);
+  }
+
+  .breadcrumb-sep {
+    color: var(--color-text-muted);
+  }
+
+  .breadcrumb-current {
+    color: var(--color-text);
+  }
+
+  .post-header {
+    margin-bottom: 2rem;
+  }
+
+  .post-title {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    margin: 0 0 1rem;
+  }
+
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .post-date {
+    font-weight: 500;
+  }
+
+  .post-reading-time {
+    color: var(--color-text-muted);
+  }
+
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .post-body-wrapper {
+    position: relative;
+  }
+
+  .post-body {
+    min-width: 0;
+  }
+
+  .post-toc {
+    display: none;
+  }
+
+  @media (min-width: 1280px) {
+    .post-body-wrapper {
+      padding-right: 16rem;
+    }
+
+    .post-toc {
+      display: block;
+      position: fixed;
+      right: calc(10%);
+      top: 6rem;
+      width: 14rem;
+      max-height: calc(100vh - 8rem);
+      overflow-y: auto;
+      padding: 1rem 1.25rem;
+      border-left: 2px solid var(--color-border);
+    }
+
+    .toc-header {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .toc-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .toc-link {
+      display: block;
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      line-height: 1.5;
+      padding: 0.125rem 0;
+      border-left: 2px solid transparent;
+      padding-left: 0.625rem;
+      margin-left: -0.125rem;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .toc-link:hover {
+      color: var(--color-accent);
+      border-color: var(--color-accent);
+    }
+
+    .toc-depth-2 {
+      padding-left: 0.625rem;
+    }
+
+    .toc-depth-3 {
+      padding-left: 1.5rem;
+      font-size: 0.75rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .post-title {
+      font-size: 1.5rem;
+    }
+
+    .post-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
+  }
+</style>
