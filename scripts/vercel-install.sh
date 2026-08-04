@@ -24,9 +24,10 @@ esac
 echo "  OK (prefix: ${AUTOUPDATE_TOKEN:0:8}...)"
 
 echo "[2/3] 配置 submodule 认证 (insteadOf: Polarisyo:<AUTOUPDATE_TOKEN>)..."
-# 用户名用 GitHub 账号名（已验证有效），token 从 AUTOUPDATE_TOKEN 读取
-git config --global "url.https://Polarisyo:${AUTOUPDATE_TOKEN}@github.com/.insteadOf" "https://github.com/"
-git config --global "url.https://Polarisyo:${AUTOUPDATE_TOKEN}@github.com/.insteadOf" "git@github.com:"
+# .gitmodules 用的是 https://github.com/ 开头的 URL，
+# 用 --add 避免多条规则互相覆盖（git config 默认覆盖同 key）
+git config --global --add "url.https://Polarisyo:${AUTOUPDATE_TOKEN}@github.com/.insteadOf" "https://github.com/"
+git config --global --add "url.https://Polarisyo:${AUTOUPDATE_TOKEN}@github.com/.insteadOf" "git@github.com:"
 echo "  OK"
 
 echo "[3/3] git submodule update --init --recursive && npm ci..."
