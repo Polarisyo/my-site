@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "bash scripts/vercel-install.sh",
+  "buildCommand": "npm run build",
+  "framework": "astro",
+  "installCommandHint": "私有 submodule 需用 x-access-token 认证，见 scripts/vercel-install.sh"
+}
