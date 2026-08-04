@@ -1,16 +1,19 @@
-import { notesSchema, type NoteData } from '../content.config';
+import type { CollectionConfig, FieldSpec } from './collections';
+import type { BlogData, NoteData, ProjectData } from '../content.config';
 
-export type { NoteData };
+/** 写入接口：frontmatter 字段 + body。具体字段由集合 config 描述。 */
+export interface CollectionInput {
+  body: string;
+  [key: string]: unknown;
+}
 
-export interface NoteInput {
-  title: string;
-  description?: string;
-  category: string;
-  tags: string[];
-  order?: number;
-  draft?: boolean;
+/** 解析结果：zod 校验后的 data + 原文 body。data 用联合类型保留字段提示。 */
+export interface ParsedContent {
+  data: Partial<BlogData & NoteData & ProjectData>;
   body: string;
 }
+
+export class ValidationError extends Error {}
 
 /** 需要双引号包裹的 YAML 标量字符。 */
 function needsQuote(s: string): boolean {
@@ -29,63 +32,109 @@ function yamlString(s: string): string {
   return s;
 }
 
-/** 把 NoteInput 序列化为完整 Markdown 文件内容。写入前做 zod 校验。 */
-export function serializeNote(input: NoteInput): string {
-  // 校验 frontmatter（不含 body）
-  const parsed = notesSchema.safeParse({
-    title: input.title,
-    description: input.description,
-    category: input.category,
-    tags: input.tags,
-    order: input.order,
-    draft: input.draft,
-  });
+/** 把日期格式化为 YYYY-MM-DD（blog.date 用）。 */
+function formatDate(val: unknown): string {
+  let d: Date;
+  if (val instanceof Date) d = val;
+  else if (typeof val === 'string') d = new Date(val);
+  else d = new Date(String(val));
+  if (isNaN(d.getTime())) return String(val);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** 序列化单个字段为 0 或 1 行 YAML。 */
+function serializeField(f: FieldSpec, val: unknown): string[] {
+  switch (f.kind) {
+    case 'string':
+    case 'url':
+    case 'enum': {
+      if (val === undefined || val === null) return [];
+      const s = String(val);
+      if (s === '' && f.optional) return [];
+      if (s === '') return [];
+      return [`${f.key}: ${yamlString(s)}`];
+    }
+    case 'string[]': {
+      const arr = Array.isArray(val) ? val.map(String) : [];
+      if (arr.length === 0) return [`${f.key}: []`];
+      return [`${f.key}: [${arr.map((t) => yamlString(t)).join(', ')}]`];
+    }
+    case 'number': {
+      if (val === undefined || val === null || val === '') return [];
+      const n = Number(val);
+      if (!Number.isFinite(n)) return [];
+      return [`${f.key}: ${n}`];
+    }
+    case 'boolean': {
+      // 仅在 true 时输出；false 由 schema 默认值覆盖，省略更干净
+      if (val === true) return [`${f.key}: true`];
+      return [];
+    }
+    case 'date': {
+      if (val === undefined || val === null || val === '') return [];
+      return [`${f.key}: ${formatDate(val)}`];
+    }
+    default:
+      return [];
+  }
+}
+
+/** 把 CollectionInput 序列化为完整 Markdown 文件内容。写入前做 zod 校验。 */
+export function serialize(config: CollectionConfig, input: CollectionInput): string {
+  // 组装 frontmatter 对象（按 config.fields 取值）
+  const fm: Record<string, unknown> = {};
+  for (const f of config.fields) {
+    fm[f.key] = input[f.key];
+  }
+
+  const parsed = config.schema.safeParse(fm);
   if (!parsed.success) {
     throw new ValidationError(parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
   }
-  const d = parsed.data;
+  const d = parsed.data as Record<string, unknown>;
 
   const lines: string[] = ['---'];
-  lines.push(`title: ${yamlString(d.title)}`);
-  if (d.description !== undefined) lines.push(`description: ${yamlString(d.description)}`);
-  lines.push(`category: ${yamlString(d.category)}`);
-  if (d.tags && d.tags.length > 0) {
-    lines.push(`tags: [${d.tags.map((t) => yamlString(t)).join(', ')}]`);
-  } else {
-    lines.push(`tags: []`);
+  for (const f of config.fields) {
+    lines.push(...serializeField(f, d[f.key]));
   }
-  if (d.order !== undefined) lines.push(`order: ${d.order}`);
-  if (d.draft) lines.push(`draft: true`);
   lines.push('---');
   lines.push('');
-  lines.push(input.body.replace(/\s+$/, ''));
+  lines.push(String(input.body || '').replace(/\s+$/, ''));
   return lines.join('\n') + '\n';
 }
 
-export class ValidationError extends Error {}
-
-export interface ParsedNote {
-  data: NoteData;
-  body: string;
-}
-
-/** 解析 Markdown 原文为 frontmatter data + body。简单 YAML 解析，够用即可。 */
-export function parseNote(raw: string): ParsedNote {
+/** 解析 Markdown 原文为 frontmatter data + body。简单 YAML 解析 + zod 校验。 */
+export function parse(config: CollectionConfig, raw: string): ParsedContent {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!match) {
     throw new Error('无法解析 frontmatter：缺少 --- 分隔符');
   }
   const [, yamlBlock, body] = match;
   const data = parseSimpleYaml(yamlBlock);
-  // zod 校验 + 默认值
-  const parsed = notesSchema.safeParse(data);
+  const parsed = config.schema.safeParse(data);
   if (!parsed.success) {
     throw new Error('frontmatter 不符合 schema: ' + parsed.error.issues.map((i) => i.message).join('; '));
   }
-  return { data: parsed.data, body };
+  return { data: parsed.data as ParsedContent['data'], body };
 }
 
-/** 极简 YAML 解析：支持 title/description/category 等标量、tags 流式数组、order/draft。 */
+/** frontmatter 解析失败时的兜底 data，让编辑页仍能加载（用户可手动修复）。 */
+export function fallbackData(config: CollectionConfig, slug: string): ParsedContent['data'] {
+  const today = formatDate(new Date());
+  switch (config.dir) {
+    case 'blog':
+      return { title: slug, date: today, tags: [], draft: false };
+    case 'notes':
+      return { title: slug, category: '未分类', tags: [], draft: false };
+    case 'projects':
+      return { name: slug, description: '', techStack: [], repoUrl: '', status: 'active', featured: false };
+    default:
+      return { title: slug };
+  }
+}
+
+/** 极简 YAML 解析：支持标量、流式数组、布尔/数字字面量。 */
 function parseSimpleYaml(block: string): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const rawLine of block.split(/\r?\n/)) {
@@ -125,11 +174,11 @@ function unquote(s: string): string {
   return s;
 }
 
-/** 生成 slug：留空时回退为 note-YYYYMMDD-HHmmss。 */
-export function generateSlug(): string {
+/** 生成 slug：留空时回退为 {prefix}-YYYYMMDD-HHmmss。 */
+export function generateSlug(prefix = 'note'): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `note-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  return `${prefix}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
 /** 清理用户输入 slug：只保留 a-z0-9-，小写，去首尾连字符。 */

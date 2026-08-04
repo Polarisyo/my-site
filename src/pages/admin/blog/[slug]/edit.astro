@@ -1,54 +1,63 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
-import NoteEditor from '../../../../components/NoteEditor.astro';
-import { getNote } from '../../../../server/github';
+import BlogEditor from '../../../../components/BlogEditor.astro';
+import { COLLECTIONS } from '../../../../server/collections';
+import { getContent } from '../../../../server/github';
 
 export const prerender = false;
 
-// 无 getStaticPaths：SSR 模式直接从 params 读 slug
 const slug = Astro.params.slug as string;
+const CONFIG = COLLECTIONS.blog;
 
-let note: Awaited<ReturnType<typeof getNote>> = null;
+let post: Awaited<ReturnType<typeof getContent>> = null;
 let loadError = '';
 try {
-  note = await getNote(slug);
+  post = await getContent(CONFIG, slug);
 } catch (e: any) {
   loadError = e?.message || String(e);
 }
+
+// data.date 经 zod coerce.date() 解析为 Date 对象，需格式化为 YYYY-MM-DD 给 date input
+function toDateInput(d: unknown): string {
+  if (!d) return '';
+  const date = d instanceof Date ? d : new Date(String(d));
+  if (isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 ---
 
-<BaseLayout title={note ? `编辑：${note.data.title}` : '编辑笔记'}>
+<BaseLayout title={post ? `编辑：${post.data.title}` : '编辑文章'}>
   <div class="page-header">
     <div>
       <a href="/admin" class="back-dash">← 管理中心</a>
-      <h1 class="page-title">编辑笔记</h1>
+      <h1 class="page-title">编辑文章</h1>
     </div>
-    <a href="/admin/notes" class="back-link">← 返回列表</a>
+    <a href="/admin/blog" class="back-link">← 返回列表</a>
   </div>
 
   {loadError ? (
     <div class="error-state">
       <p>加载失败：{loadError}</p>
-      <p class="error-hint">请检查 GITHUB_TOKEN 配置与网络，或<a href="/admin/notes">返回列表</a>。</p>
+      <p class="error-hint">请检查 GITHUB_TOKEN 配置与网络，或<a href="/admin/blog">返回列表</a>。</p>
     </div>
-  ) : !note ? (
+  ) : !post ? (
     <div class="error-state">
-      <p>笔记「{slug}」不存在。</p>
-      <a href="/admin/notes" class="back-link">返回列表</a>
+      <p>文章「{slug}」不存在。</p>
+      <a href="/admin/blog" class="back-link">返回列表</a>
     </div>
   ) : (
-    <NoteEditor
+    <BlogEditor
       mode="edit"
-      slug={note.slug}
-      sha={note.sha}
+      slug={post.slug}
+      sha={post.sha}
       initial={{
-        title: note.data.title,
-        description: note.data.description,
-        category: note.data.category,
-        tags: note.data.tags,
-        order: note.data.order,
-        draft: note.data.draft,
-        body: note.body,
+        title: post.data.title,
+        description: post.data.description,
+        date: toDateInput(post.data.date),
+        tags: post.data.tags,
+        draft: post.data.draft,
+        body: post.body,
       }}
     />
   )}

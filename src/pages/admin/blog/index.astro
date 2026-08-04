@@ -5,46 +5,47 @@ import { getCollection } from 'astro:content';
 export const prerender = false;
 
 // 列表用 getCollection（构建快照，零 GitHub API 调用）。
-// rebuild 完成后才反映最新增删；编辑页则 live 读 GitHub API。
-const allNotes = await getCollection('notes');
-const sortedNotes = allNotes.sort((a, b) => {
-  const oa = a.data.order ?? 999;
-  const ob = b.data.order ?? 999;
-  if (oa !== ob) return oa - ob;
-  return a.data.title.localeCompare(b.data.title, 'zh-CN');
-});
+const allPosts = await getCollection('blog');
+const sortedPosts = allPosts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+function fmtDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 ---
 
-<BaseLayout title="笔记管理">
+<BaseLayout title="日常管理">
   <div class="admin-header">
     <div>
       <a href="/admin" class="back-dash">← 管理中心</a>
-      <h1 class="admin-title">笔记管理</h1>
-      <p class="admin-sub">共 {sortedNotes.length} 篇 · 公开站每次保存后约 1–2 分钟自动重建</p>
+      <h1 class="admin-title">日常管理</h1>
+      <p class="admin-sub">共 {sortedPosts.length} 篇 · 公开站每次保存后约 1–2 分钟自动重建</p>
     </div>
-    <a href="/admin/notes/new" class="btn-new">+ 新建笔记</a>
+    <a href="/admin/blog/new" class="btn-new">+ 新建文章</a>
   </div>
 
   <div class="admin-list">
-    {sortedNotes.length === 0 ? (
+    {sortedPosts.length === 0 ? (
       <div class="empty-state">
-        <p>暂无笔记</p>
-        <a href="/admin/notes/new" class="btn-new">写第一篇</a>
+        <p>暂无文章</p>
+        <a href="/admin/blog/new" class="btn-new">写第一篇</a>
       </div>
     ) : (
-      sortedNotes.map((note) => (
-        <div class="admin-item" data-slug={note.id}>
+      sortedPosts.map((post) => (
+        <div class="admin-item" data-slug={post.id}>
           <div class="item-main">
-            <span class="item-title">{note.data.title}</span>
+            <span class="item-title">{post.data.title}</span>
             <div class="item-meta">
-              <span class="tag">{note.data.category}</span>
-              {note.data.draft && <span class="badge-draft">草稿</span>}
-              {note.data.order !== undefined && <span class="item-order">#{note.data.order}</span>}
+              <span class="item-date">{fmtDate(post.data.date)}</span>
+              {post.data.tags.map((tag) => (
+                <span class="tag">{tag}</span>
+              ))}
+              {post.data.draft && <span class="badge-draft">草稿</span>}
             </div>
           </div>
           <div class="item-actions">
-            <a href={`/admin/notes/${note.id}/edit`} class="btn-edit">编辑</a>
-            <button type="button" class="btn-delete" data-delete-slug={note.id}>删除</button>
+            <a href={`/admin/blog/${post.id}/edit`} class="btn-edit">编辑</a>
+            <button type="button" class="btn-delete" data-delete-slug={post.id}>删除</button>
           </div>
         </div>
       ))
@@ -61,13 +62,13 @@ const sortedNotes = allNotes.sort((a, b) => {
       var btn = e.target.closest('[data-delete-slug]');
       if (!btn) return;
       var slug = btn.getAttribute('data-delete-slug');
-      if (!confirm('确认删除笔记「' + slug + '」？此操作会从仓库移除文件并触发重建，不可撤销。')) return;
+      if (!confirm('确认删除文章「' + slug + '」？此操作会从仓库移除文件并触发重建，不可撤销。')) return;
 
       msg.textContent = '删除中…';
       msg.className = 'del-msg';
       btn.disabled = true;
 
-      fetch('/api/notes/' + encodeURIComponent(slug), { method: 'DELETE' })
+      fetch('/api/blog/' + encodeURIComponent(slug), { method: 'DELETE' })
         .then(function (res) {
           return res.json().then(function (j) {
             return { status: res.status, json: j };
@@ -189,6 +190,19 @@ const sortedNotes = allNotes.sort((a, b) => {
     flex-wrap: wrap;
   }
 
+  .item-date {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+  }
+
+  .tag {
+    font-size: 0.6875rem;
+    padding: 0.0625rem 0.5rem;
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+  }
+
   .badge-draft {
     display: inline-block;
     padding: 0.0625rem 0.5rem;
@@ -197,11 +211,6 @@ const sortedNotes = allNotes.sort((a, b) => {
     color: #d97706;
     background-color: color-mix(in srgb, #f59e0b 15%, transparent);
     border-radius: var(--radius-sm);
-  }
-
-  .item-order {
-    font-size: 0.6875rem;
-    color: var(--color-text-muted);
   }
 
   .item-actions {

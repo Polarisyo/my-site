@@ -4,47 +4,64 @@ import { getCollection } from 'astro:content';
 
 export const prerender = false;
 
-// 列表用 getCollection（构建快照，零 GitHub API 调用）。
-// rebuild 完成后才反映最新增删；编辑页则 live 读 GitHub API。
-const allNotes = await getCollection('notes');
-const sortedNotes = allNotes.sort((a, b) => {
-  const oa = a.data.order ?? 999;
-  const ob = b.data.order ?? 999;
-  if (oa !== ob) return oa - ob;
-  return a.data.title.localeCompare(b.data.title, 'zh-CN');
+const allProjects = await getCollection('projects');
+
+const statusOrder: Record<string, number> = { active: 0, concept: 1, archived: 2 };
+const sortedProjects = allProjects.sort((a, b) => {
+  const sa = statusOrder[a.data.status] ?? 99;
+  const sb = statusOrder[b.data.status] ?? 99;
+  if (sa !== sb) return sa - sb;
+  return b.data.featured === a.data.featured ? 0 : b.data.featured ? -1 : 1;
 });
+
+const statusLabels: Record<string, string> = {
+  active: '进行中',
+  concept: '概念',
+  archived: '已归档',
+};
+const statusColors: Record<string, string> = {
+  active: 'status-active',
+  concept: 'status-concept',
+  archived: 'status-archived',
+};
 ---
 
-<BaseLayout title="笔记管理">
+<BaseLayout title="项目管理">
   <div class="admin-header">
     <div>
       <a href="/admin" class="back-dash">← 管理中心</a>
-      <h1 class="admin-title">笔记管理</h1>
-      <p class="admin-sub">共 {sortedNotes.length} 篇 · 公开站每次保存后约 1–2 分钟自动重建</p>
+      <h1 class="admin-title">项目管理</h1>
+      <p class="admin-sub">共 {sortedProjects.length} 个 · 公开站每次保存后约 1–2 分钟自动重建</p>
     </div>
-    <a href="/admin/notes/new" class="btn-new">+ 新建笔记</a>
+    <a href="/admin/projects/new" class="btn-new">+ 新建项目</a>
   </div>
 
   <div class="admin-list">
-    {sortedNotes.length === 0 ? (
+    {sortedProjects.length === 0 ? (
       <div class="empty-state">
-        <p>暂无笔记</p>
-        <a href="/admin/notes/new" class="btn-new">写第一篇</a>
+        <p>暂无项目</p>
+        <a href="/admin/projects/new" class="btn-new">添加第一个</a>
       </div>
     ) : (
-      sortedNotes.map((note) => (
-        <div class="admin-item" data-slug={note.id}>
+      sortedProjects.map((project) => (
+        <div class="admin-item" data-slug={project.id}>
           <div class="item-main">
-            <span class="item-title">{note.data.title}</span>
+            <div class="item-title-row">
+              <span class="item-title">{project.data.name}</span>
+              {project.data.featured && <span class="badge-featured">★ 精选</span>}
+            </div>
             <div class="item-meta">
-              <span class="tag">{note.data.category}</span>
-              {note.data.draft && <span class="badge-draft">草稿</span>}
-              {note.data.order !== undefined && <span class="item-order">#{note.data.order}</span>}
+              <span class={`project-status ${statusColors[project.data.status]}`}>
+                {statusLabels[project.data.status] ?? project.data.status}
+              </span>
+              {project.data.techStack.map((tech) => (
+                <span class="tag">{tech}</span>
+              ))}
             </div>
           </div>
           <div class="item-actions">
-            <a href={`/admin/notes/${note.id}/edit`} class="btn-edit">编辑</a>
-            <button type="button" class="btn-delete" data-delete-slug={note.id}>删除</button>
+            <a href={`/admin/projects/${project.id}/edit`} class="btn-edit">编辑</a>
+            <button type="button" class="btn-delete" data-delete-slug={project.id}>删除</button>
           </div>
         </div>
       ))
@@ -61,13 +78,13 @@ const sortedNotes = allNotes.sort((a, b) => {
       var btn = e.target.closest('[data-delete-slug]');
       if (!btn) return;
       var slug = btn.getAttribute('data-delete-slug');
-      if (!confirm('确认删除笔记「' + slug + '」？此操作会从仓库移除文件并触发重建，不可撤销。')) return;
+      if (!confirm('确认删除项目「' + slug + '」？此操作会从仓库移除文件并触发重建，不可撤销。')) return;
 
       msg.textContent = '删除中…';
       msg.className = 'del-msg';
       btn.disabled = true;
 
-      fetch('/api/notes/' + encodeURIComponent(slug), { method: 'DELETE' })
+      fetch('/api/projects/' + encodeURIComponent(slug), { method: 'DELETE' })
         .then(function (res) {
           return res.json().then(function (j) {
             return { status: res.status, json: j };
@@ -174,12 +191,26 @@ const sortedNotes = allNotes.sort((a, b) => {
     min-width: 0;
   }
 
+  .item-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.375rem;
+  }
+
   .item-title {
-    display: block;
     font-size: 0.9375rem;
     font-weight: 500;
     color: var(--color-text);
-    margin-bottom: 0.375rem;
+  }
+
+  .badge-featured {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: #d97706;
+    background-color: color-mix(in srgb, #f59e0b 15%, transparent);
+    padding: 0.0625rem 0.5rem;
+    border-radius: var(--radius-sm);
   }
 
   .item-meta {
@@ -189,19 +220,34 @@ const sortedNotes = allNotes.sort((a, b) => {
     flex-wrap: wrap;
   }
 
-  .badge-draft {
-    display: inline-block;
-    padding: 0.0625rem 0.5rem;
+  .project-status {
     font-size: 0.6875rem;
     font-weight: 500;
-    color: #d97706;
-    background-color: color-mix(in srgb, #f59e0b 15%, transparent);
-    border-radius: var(--radius-sm);
+    padding: 0.0625rem 0.5rem;
+    border-radius: var(--radius-full);
   }
 
-  .item-order {
+  .status-active {
+    color: #10b981;
+    background-color: rgba(16, 185, 129, 0.1);
+  }
+
+  .status-concept {
+    color: #f59e0b;
+    background-color: rgba(245, 158, 11, 0.1);
+  }
+
+  .status-archived {
+    color: #6b7280;
+    background-color: rgba(107, 114, 128, 0.1);
+  }
+
+  .tag {
     font-size: 0.6875rem;
-    color: var(--color-text-muted);
+    padding: 0.0625rem 0.5rem;
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
   }
 
   .item-actions {

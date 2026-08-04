@@ -1,20 +1,20 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import NoteEditor from '../../../components/NoteEditor.astro';
+import ProjectEditor from '../../../components/ProjectEditor.astro';
 
 export const prerender = false;
 ---
 
-<BaseLayout title="新建笔记">
+<BaseLayout title="新建项目">
   <div class="page-header">
     <div>
       <a href="/admin" class="back-dash">← 管理中心</a>
-      <h1 class="page-title">新建笔记</h1>
+      <h1 class="page-title">新建项目</h1>
     </div>
-    <a href="/admin/notes" class="back-link">← 返回列表</a>
+    <a href="/admin/projects" class="back-link">← 返回列表</a>
   </div>
 
-  <NoteEditor mode="new" />
+  <ProjectEditor mode="new" initial={{ status: 'active' }} />
 </BaseLayout>
 
 <style>

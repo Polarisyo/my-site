@@ -7,19 +7,19 @@ import { json, readBody, writeResponse, errorResponse } from '../../../server/co
 
 export const prerender = false;
 
-const CONFIG = COLLECTIONS.notes;
+const CONFIG = COLLECTIONS.projects;
 
-// GET /api/notes —— 列出全部笔记元信息（live 从 GitHub 读）
+// GET /api/projects —— 列出全部项目元信息（live 从 GitHub 读）
 export const GET: APIRoute = async () => {
   try {
-    const notes = await listContent(CONFIG);
-    return json({ notes });
+    const projects = await listContent(CONFIG);
+    return json({ projects });
   } catch (e) {
     return json({ error: (e as Error)?.message || String(e) }, 500);
   }
 };
 
-// POST /api/notes —— 创建笔记
+// POST /api/projects —— 创建项目
 export const POST: APIRoute = async ({ request }) => {
   let body: any;
   try {

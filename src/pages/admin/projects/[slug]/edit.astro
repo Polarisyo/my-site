@@ -1,54 +1,56 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
-import NoteEditor from '../../../../components/NoteEditor.astro';
-import { getNote } from '../../../../server/github';
+import ProjectEditor from '../../../../components/ProjectEditor.astro';
+import { COLLECTIONS } from '../../../../server/collections';
+import { getContent } from '../../../../server/github';
 
 export const prerender = false;
 
-// 无 getStaticPaths：SSR 模式直接从 params 读 slug
 const slug = Astro.params.slug as string;
+const CONFIG = COLLECTIONS.projects;
 
-let note: Awaited<ReturnType<typeof getNote>> = null;
+let project: Awaited<ReturnType<typeof getContent>> = null;
 let loadError = '';
 try {
-  note = await getNote(slug);
+  project = await getContent(CONFIG, slug);
 } catch (e: any) {
   loadError = e?.message || String(e);
 }
 ---
 
-<BaseLayout title={note ? `编辑：${note.data.title}` : '编辑笔记'}>
+<BaseLayout title={project ? `编辑：${project.data.name}` : '编辑项目'}>
   <div class="page-header">
     <div>
       <a href="/admin" class="back-dash">← 管理中心</a>
-      <h1 class="page-title">编辑笔记</h1>
+      <h1 class="page-title">编辑项目</h1>
     </div>
-    <a href="/admin/notes" class="back-link">← 返回列表</a>
+    <a href="/admin/projects" class="back-link">← 返回列表</a>
   </div>
 
   {loadError ? (
     <div class="error-state">
       <p>加载失败：{loadError}</p>
-      <p class="error-hint">请检查 GITHUB_TOKEN 配置与网络，或<a href="/admin/notes">返回列表</a>。</p>
+      <p class="error-hint">请检查 GITHUB_TOKEN 配置与网络，或<a href="/admin/projects">返回列表</a>。</p>
     </div>
-  ) : !note ? (
+  ) : !project ? (
     <div class="error-state">
-      <p>笔记「{slug}」不存在。</p>
-      <a href="/admin/notes" class="back-link">返回列表</a>
+      <p>项目「{slug}」不存在。</p>
+      <a href="/admin/projects" class="back-link">返回列表</a>
     </div>
   ) : (
-    <NoteEditor
+    <ProjectEditor
       mode="edit"
-      slug={note.slug}
-      sha={note.sha}
+      slug={project.slug}
+      sha={project.sha}
       initial={{
-        title: note.data.title,
-        description: note.data.description,
-        category: note.data.category,
-        tags: note.data.tags,
-        order: note.data.order,
-        draft: note.data.draft,
-        body: note.body,
+        name: project.data.name,
+        description: project.data.description,
+        techStack: project.data.techStack,
+        demoUrl: project.data.demoUrl ? String(project.data.demoUrl) : '',
+        repoUrl: project.data.repoUrl ? String(project.data.repoUrl) : '',
+        status: project.data.status,
+        featured: project.data.featured,
+        body: project.body,
       }}
     />
   )}

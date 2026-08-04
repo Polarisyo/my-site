@@ -1,4 +1,5 @@
-import { parseNote, type ParsedNote } from './markdown';
+import { parse, fallbackData, type ParsedContent } from './markdown';
+import type { CollectionConfig } from './collections';
 import {
   GITHUB_TOKEN,
   GITHUB_OWNER,
@@ -62,43 +63,43 @@ function unb64(input: string): string {
   return Buffer.from(input.replace(/\n/g, ''), 'base64').toString('utf8');
 }
 
-export interface NoteMeta {
+export interface ContentMeta {
   slug: string;
   sha: string;
   name: string;
 }
 
-/** 列出 notes 目录下所有 .md 文件元信息（不含内容）。 */
-export async function listNotes(): Promise<NoteMeta[]> {
-  const data = await ghJson<any[]>(`/repos/${contentRepo()}/contents/notes`);
+/** 列出指定集合目录下所有 .md 文件元信息（不含内容）。 */
+export async function listContent(config: CollectionConfig): Promise<ContentMeta[]> {
+  const data = await ghJson<any[]>(`/repos/${contentRepo()}/contents/${config.dir}`);
   if (!Array.isArray(data)) return [];
   return data
     .filter((f) => f.type === 'file' && f.name.endsWith('.md'))
     .map((f) => ({ slug: f.name.replace(/\.md$/, ''), sha: f.sha, name: f.name }));
 }
 
-export interface NoteDetail extends ParsedNote {
+export interface ContentDetail extends ParsedContent {
   slug: string;
   sha: string;
   raw: string;
 }
 
-/** 取单篇笔记（含 sha 与解析后的 data/body）。404 时返回 null。
+/** 取单篇内容（含 sha 与解析后的 data/body）。404 时返回 null。
  *  frontmatter 不合规时不抛错——返回兜底 data，让删除/编辑仍能工作（可手动修复）。 */
-export async function getNote(slug: string): Promise<NoteDetail | null> {
+export async function getContent(config: CollectionConfig, slug: string): Promise<ContentDetail | null> {
   let data: any;
   try {
-    data = await ghJson<any>(`/repos/${contentRepo()}/contents/notes/${slug}.md`);
+    data = await ghJson<any>(`/repos/${contentRepo()}/contents/${config.dir}/${slug}.md`);
   } catch (e) {
     if (e instanceof GitHubError && e.status === 404) return null;
     throw e;
   }
   const raw = unb64(data.content);
-  let parsed: ParsedNote;
+  let parsed: ParsedContent;
   try {
-    parsed = parseNote(raw);
+    parsed = parse(config, raw);
   } catch {
-    parsed = { data: { title: slug, category: '未分类', tags: [] }, body: raw };
+    parsed = { data: fallbackData(config, slug), body: raw };
   }
   return { slug, sha: data.sha, raw, data: parsed.data, body: parsed.body };
 }
@@ -110,18 +111,23 @@ export interface WriteResult {
   bumpError?: string; // bump 失败时的原因
 }
 
-/** 创建笔记文件。若已存在返回 409。写入后自动 bump submodule。 */
-export async function createNote(slug: string, md: string, message?: string): Promise<WriteResult> {
+/** 创建内容文件。若已存在返回 409。写入后自动 bump submodule。 */
+export async function createContent(
+  config: CollectionConfig,
+  slug: string,
+  md: string,
+  message?: string,
+): Promise<WriteResult> {
   // 先探测是否已存在
-  const existing = await getNote(slug);
+  const existing = await getContent(config, slug);
   if (existing) {
-    const err = new GitHubError(409, 'Conflict', `notes/${slug}.md 已存在`, '');
+    const err = new GitHubError(409, 'Conflict', `${config.dir}/${slug}.md 已存在`, '');
     throw err;
   }
-  const res = await ghJson<any>(`/repos/${contentRepo()}/contents/notes/${slug}.md`, {
+  const res = await ghJson<any>(`/repos/${contentRepo()}/contents/${config.dir}/${slug}.md`, {
     method: 'PUT',
     body: JSON.stringify({
-      message: message || `note: 新增 ${slug}`,
+      message: message || `${config.commitPrefix}: 新增 ${slug}`,
       content: b64(md),
       branch: 'main',
     }),
@@ -130,12 +136,18 @@ export async function createNote(slug: string, md: string, message?: string): Pr
   return finalize(slug, contentSha);
 }
 
-/** 更新笔记文件（需提供当前 sha 防并发覆盖）。写入后自动 bump submodule。 */
-export async function updateNote(slug: string, md: string, sha: string, message?: string): Promise<WriteResult> {
-  const res = await ghJson<any>(`/repos/${contentRepo()}/contents/notes/${slug}.md`, {
+/** 更新内容文件（需提供当前 sha 防并发覆盖）。写入后自动 bump submodule。 */
+export async function updateContent(
+  config: CollectionConfig,
+  slug: string,
+  md: string,
+  sha: string,
+  message?: string,
+): Promise<WriteResult> {
+  const res = await ghJson<any>(`/repos/${contentRepo()}/contents/${config.dir}/${slug}.md`, {
     method: 'PUT',
     body: JSON.stringify({
-      message: message || `note: 更新 ${slug}`,
+      message: message || `${config.commitPrefix}: 更新 ${slug}`,
       content: b64(md),
       sha,
       branch: 'main',
@@ -145,16 +157,20 @@ export async function updateNote(slug: string, md: string, sha: string, message?
   return finalize(slug, contentSha);
 }
 
-/** 删除笔记文件。服务端自取 sha。删除后自动 bump submodule。 */
-export async function deleteNote(slug: string, message?: string): Promise<WriteResult> {
-  const existing = await getNote(slug);
+/** 删除内容文件。服务端自取 sha。删除后自动 bump submodule。 */
+export async function deleteContent(
+  config: CollectionConfig,
+  slug: string,
+  message?: string,
+): Promise<WriteResult> {
+  const existing = await getContent(config, slug);
   if (!existing) {
-    throw new GitHubError(404, 'Not Found', `notes/${slug}.md 不存在`, '');
+    throw new GitHubError(404, 'Not Found', `${config.dir}/${slug}.md 不存在`, '');
   }
-  const res = await ghJson<any>(`/repos/${contentRepo()}/contents/notes/${slug}.md`, {
+  const res = await ghJson<any>(`/repos/${contentRepo()}/contents/${config.dir}/${slug}.md`, {
     method: 'DELETE',
     body: JSON.stringify({
-      message: message || `note: 删除 ${slug}`,
+      message: message || `${config.commitPrefix}: 删除 ${slug}`,
       sha: existing.sha,
       branch: 'main',
     }),

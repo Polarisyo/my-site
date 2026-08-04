@@ -7,26 +7,26 @@ import { json, readBody, writeResponse, errorResponse } from '../../../server/co
 
 export const prerender = false;
 
-const CONFIG = COLLECTIONS.notes;
+const CONFIG = COLLECTIONS.projects;
 
-// GET /api/notes/[slug] —— 取单篇（含 sha，供编辑预填）
+// GET /api/projects/[slug] —— 取单个（含 sha，供编辑预填）
 export const GET: APIRoute = async ({ params }) => {
   const slug = params.slug as string;
   try {
-    const note = await getContent(CONFIG, slug);
-    if (!note) return json({ error: '笔记不存在' }, 404);
+    const project = await getContent(CONFIG, slug);
+    if (!project) return json({ error: '项目不存在' }, 404);
     return json({
-      slug: note.slug,
-      sha: note.sha,
-      data: note.data,
-      body: note.body,
+      slug: project.slug,
+      sha: project.sha,
+      data: project.data,
+      body: project.body,
     });
   } catch (e) {
     return errorResponse(e);
   }
 };
 
-// PUT /api/notes/[slug] —— 更新（需带 sha 防并发覆盖）
+// PUT /api/projects/[slug] —— 更新（需带 sha 防并发覆盖）
 export const PUT: APIRoute = async ({ params, request }) => {
   const slug = params.slug as string;
   let body: any;
@@ -58,7 +58,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
   }
 };
 
-// DELETE /api/notes/[slug] —— 删除（服务端自取 sha）
+// DELETE /api/projects/[slug] —— 删除（服务端自取 sha）
 export const DELETE: APIRoute = async ({ params }) => {
   const slug = params.slug as string;
   try {

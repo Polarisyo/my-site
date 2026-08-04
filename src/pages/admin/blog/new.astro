@@ -1,20 +1,24 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import NoteEditor from '../../../components/NoteEditor.astro';
+import BlogEditor from '../../../components/BlogEditor.astro';
 
 export const prerender = false;
+
+const today = new Date();
+const pad = (n: number) => String(n).padStart(2, '0');
+const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 ---
 
-<BaseLayout title="新建笔记">
+<BaseLayout title="新建文章">
   <div class="page-header">
     <div>
       <a href="/admin" class="back-dash">← 管理中心</a>
-      <h1 class="page-title">新建笔记</h1>
+      <h1 class="page-title">新建文章</h1>
     </div>
-    <a href="/admin/notes" class="back-link">← 返回列表</a>
+    <a href="/admin/blog" class="back-link">← 返回列表</a>
   </div>
 
-  <NoteEditor mode="new" />
+  <BlogEditor mode="new" initial={{ date: todayStr }} />
 </BaseLayout>
 
 <style>
