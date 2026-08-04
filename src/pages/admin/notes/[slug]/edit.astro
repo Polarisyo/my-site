@@ -1,17 +1,19 @@
 ---
 import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import NoteEditor from '../../../../components/NoteEditor.astro';
-import { getNote } from '../../../../server/github';
+import { COLLECTIONS } from '../../../../server/collections';
+import { getContent } from '../../../../server/github';
 
 export const prerender = false;
 
 // 无 getStaticPaths：SSR 模式直接从 params 读 slug
 const slug = Astro.params.slug as string;
+const CONFIG = COLLECTIONS.notes;
 
-let note: Awaited<ReturnType<typeof getNote>> = null;
+let note: Awaited<ReturnType<typeof getContent>> = null;
 let loadError = '';
 try {
-  note = await getNote(slug);
+  note = await getContent(CONFIG, slug);
 } catch (e: any) {
   loadError = e?.message || String(e);
 }
