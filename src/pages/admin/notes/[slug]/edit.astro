@@ -1,0 +1,98 @@
+---
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import NoteEditor from '../../../../components/NoteEditor.astro';
+import { getNote } from '../../../../server/github';
+
+export const prerender = false;
+
+// 无 getStaticPaths：SSR 模式直接从 params 读 slug
+const slug = Astro.params.slug as string;
+
+let note: Awaited<ReturnType<typeof getNote>> = null;
+let loadError = '';
+try {
+  note = await getNote(slug);
+} catch (e: any) {
+  loadError = e?.message || String(e);
+}
+---
+
+<BaseLayout title={note ? `编辑：${note.data.title}` : '编辑笔记'}>
+  <div class="page-header">
+    <h1 class="page-title">编辑笔记</h1>
+    <a href="/admin/notes" class="back-link">← 返回列表</a>
+  </div>
+
+  {loadError ? (
+    <div class="error-state">
+      <p>加载失败：{loadError}</p>
+      <p class="error-hint">请检查 GITHUB_TOKEN 配置与网络，或<a href="/admin/notes">返回列表</a>。</p>
+    </div>
+  ) : !note ? (
+    <div class="error-state">
+      <p>笔记「{slug}」不存在。</p>
+      <a href="/admin/notes" class="back-link">返回列表</a>
+    </div>
+  ) : (
+    <NoteEditor
+      mode="edit"
+      slug={note.slug}
+      sha={note.sha}
+      initial={{
+        title: note.data.title,
+        description: note.data.description,
+        category: note.data.category,
+        tags: note.data.tags,
+        order: note.data.order,
+        draft: note.data.draft,
+        body: note.body,
+      }}
+    />
+  )}
+</BaseLayout>
+
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .back-link {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover {
+    color: var(--color-accent);
+  }
+
+  .error-state {
+    padding: 2rem 1.5rem;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    color: var(--color-text-secondary);
+  }
+
+  .error-state .error-hint {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    margin-top: 0.5rem;
+  }
+
+  .error-state a {
+    color: var(--color-accent);
+  }
+</style>

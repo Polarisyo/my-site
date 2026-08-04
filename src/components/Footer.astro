@@ -3,7 +3,7 @@
 <footer class="site-footer">
   <div class="footer-inner">
     <div class="footer-left">
-      <p>© {new Date().getFullYear()} Polaris. All rights reserved.</p>
+      <p data-secret-entry title="">© {new Date().getFullYear()} Polaris. All rights reserved.</p>
     </div>
     <div class="footer-right">
       <span class="divider">·</span>
@@ -13,6 +13,27 @@
     </div>
   </div>
 </footer>
+
+<!-- 隐蔽登录入口：连续三次点击版权文字即跳转登录页。直接访问 /secret-garden 同样有效。 -->
+<script is:inline>
+  (function () {
+    var el = document.querySelector('[data-secret-entry]');
+    if (!el) return;
+    var count = 0;
+    var timer = null;
+    el.addEventListener('click', function () {
+      count++;
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        count = 0;
+      }, 600);
+      if (count >= 3) {
+        count = 0;
+        window.location.href = '/secret-garden';
+      }
+    });
+  })();
+</script>
 
 <style>
   .site-footer {

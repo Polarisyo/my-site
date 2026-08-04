@@ -1,0 +1,43 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import NoteEditor from '../../../components/NoteEditor.astro';
+
+export const prerender = false;
+---
+
+<BaseLayout title="新建笔记">
+  <div class="page-header">
+    <h1 class="page-title">新建笔记</h1>
+    <a href="/admin/notes" class="back-link">← 返回列表</a>
+  </div>
+
+  <NoteEditor mode="new" />
+</BaseLayout>
+
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  .back-link {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover {
+    color: var(--color-accent);
+  }
+</style>

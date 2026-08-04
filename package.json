@@ -9,11 +9,13 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "hash-password": "node scripts/hash-password.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.3",
+    "@astrojs/vercel": "^11.0.4",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.1.4",
     "flexsearch": "^0.8.212",

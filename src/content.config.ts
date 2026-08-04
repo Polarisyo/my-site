@@ -13,16 +13,21 @@ const blog = defineCollection({
   }),
 });
 
+// 抽出 notes schema 供服务端写入前复用校验（防坏数据杀构建）
+export const notesSchema = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  category: z.string(),
+  tags: z.array(z.string()).default([]),
+  order: z.number().optional(),
+  draft: z.boolean().default(false),
+});
+
+export type NoteData = z.infer<typeof notesSchema>;
+
 const notes = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/notes' }),
-  schema: z.object({
-    title: z.string(),
-    description: z.string().optional(),
-    category: z.string(),
-    tags: z.array(z.string()).default([]),
-    order: z.number().optional(),
-    draft: z.boolean().default(false),
-  }),
+  schema: notesSchema,
 });
 
 const projects = defineCollection({
