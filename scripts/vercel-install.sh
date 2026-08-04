@@ -25,8 +25,8 @@ echo "  OK (prefix: ${GITHUB_TOKEN:0:8}...)"
 
 echo "[2/3] 配置 submodule 认证 (insteadOf: x-access-token)..."
 # 注意：认证部分用 user:token 格式，用户名必须是 `x-access-token`
-git config --global "url.https://x-access-token:${GITHUB_TOKEN}@github.com/.insteadOf" "https://github.com/"
-git config --global "url.https://x-access-token:${GITHUB_TOKEN}@github.com/.insteadOf" "git@github.com:"
+git config --global "url.https://Polarisyo:${GITHUB_TOKEN}@github.com/.insteadOf" "https://github.com/"
+git config --global "url.https://Polarisyo:${GITHUB_TOKEN}@github.com/.insteadOf" "git@github.com:"
 echo "  OK"
 
 echo "[3/3] git submodule update --init --recursive && npm ci..."
